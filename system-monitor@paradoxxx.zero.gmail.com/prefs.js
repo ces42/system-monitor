@@ -266,29 +266,33 @@ const SettingFrame = class SystemMonitor {
                 set_color(color, Schema, key);
             });
         } else if (config.match(/sensor/)) {
-            let sensor_type = configParent === 'fan' ? 'fan' : 'temp';
-            let [_slist, _strlist] = check_sensors(sensor_type);
             let item = new Select(_('Sensor'));
-            if (_slist.length === 0) {
-                item.add([_('Please install lm-sensors')]);
-            } else if (_slist.length === 1) {
-                this.schema.set_string(key, _slist[0]);
-            }
-            item.add(_strlist);
-            try {
-                item.set_value(_slist.indexOf(this.schema.get_string(key)));
-            } catch (e) {
-                item.set_value(0);
-            }
-            // this.hbox3.add(item.actor);
-            if (configParent === 'fan') {
-                this.hbox2.pack_end(item.actor, true, false, 0);
+            if (configParent === 'power') {
+                // maybe do something?
             } else {
-                this.hbox2.pack_start(item.actor, true, false, 0);
+                let sensor_type = configParent === 'fan' ? 'fan' : 'temp';
+                let [_slist, _strlist] = check_sensors(sensor_type);
+                if (_slist.length === 0) {
+                    item.add([_('Please install lm-sensors')]);
+                } else if (_slist.length === 1) {
+                    this.schema.set_string(key, _slist[0]);
+                }
+                item.add(_strlist);
+                try {
+                    item.set_value(_slist.indexOf(this.schema.get_string(key)));
+                } catch (e) {
+                    item.set_value(0);
+                }
+                // this.hbox3.add(item.actor);
+                if (configParent === 'fan') {
+                    this.hbox2.pack_end(item.actor, true, false, 0);
+                } else {
+                    this.hbox2.pack_start(item.actor, true, false, 0);
+                }
+                item.selector.connect('changed', function (combo) {
+                    set_string(combo, Schema, key, _slist);
+                });
             }
-            item.selector.connect('changed', function (combo) {
-                set_string(combo, Schema, key, _slist);
-            });
         // hbox3
         } else if (config === 'speed-in-bits') {
             let item = new Gtk.CheckButton({label: _('Show network speed in bits')});
@@ -336,7 +340,7 @@ const SettingFrame = class SystemMonitor {
 
 const App = class SystemMonitor_App {
     constructor() {
-        let setting_items = ['cpu', 'memory', 'swap', 'net', 'disk', 'gpu', 'thermal', 'fan', 'freq', 'battery'];
+        let setting_items = ['cpu', 'memory', 'swap', 'net', 'disk', 'gpu', 'thermal', 'fan', 'power', 'freq', 'battery'];
         let keys = Schema.list_keys();
 
         this.items = [];

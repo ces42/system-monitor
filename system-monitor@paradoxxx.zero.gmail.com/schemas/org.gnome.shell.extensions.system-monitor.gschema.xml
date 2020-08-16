@@ -313,6 +313,44 @@
       <default>'#f2002e'</default>
       <summary>Color of fan in the chart</summary>
     </key>
+    <key name="power-display" type="b">
+      <default>false</default>
+      <summary>Display battery power draw</summary>
+      <description>Set to false to remove power display in status bar</description>
+    </key>
+    <key name="power-refresh-time" type="i">
+      <default>5000</default>
+      <summary>power draw refresh time</summary>
+      <description>Time in ms between 2 refresh of power</description>
+    </key>
+    <key name="power-graph-width" type="i">
+      <default>100</default>
+      <summary>power draw graph width</summary>
+      <description>Graph width in pixel</description>
+    </key>
+    <key name="power-show-text" type="b">
+      <default>true</default>
+      <summary>Display 'power draw'</summary>
+      <description>Set to true to show 'power' before power draw display</description>
+    </key>
+    <key name="power-show-menu" type="b">
+      <default>true</default>
+      <summary>Display Power In Menu</summary>
+      <description>Set to true to show power draw in pop-up menu</description>
+    </key>
+    <key name="power-style" enum="org.gnome.shell.extensions.system-monitor.display-style">
+      <default>'graph'</default>
+      <summary>Choose the display style.</summary>
+    </key>
+    <key name="power-sensor-file" type="s">
+      <default>'/sys/class/power_supply/BAT1/power_now'</default>
+      <summary>Sensor File</summary>
+      <description>Location of the sensor file for power draw</description>
+    </key>
+    <key name="power-power0-color" type="s">
+      <default>'#f2002e'</default>
+      <summary>Color of power draw in the chart</summary>
+    </key>
     <key name="panel-position" enum="org.gnome.shell.extensions.system-monitor.position">
       <default>'right'</default>
       <summary>Choose position on top panel.</summary>

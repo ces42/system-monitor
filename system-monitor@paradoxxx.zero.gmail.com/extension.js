@@ -1551,12 +1551,7 @@ const Freq = class SystemMonitor_Freq extends ElementBase {
 
             if (++i >= num_cpus) {
                 //that.freq = Math.round(total_frequency / num_cpus / 1000);
-                var freq = (total_frequency / num_cpus / 1000000);
-                if (freq > 1.0) {
-                    that.freq = freq.toPrecision(2);
-                } else {
-                    that.freq = freq.toPrecision(1);
-                }
+                that.freq = (total_frequency / num_cpus / 1000000).toFixed(1);
             } else {
                 file = Gio.file_new_for_path(`/sys/devices/system/cpu/cpu${i}/cpufreq/scaling_cur_freq`);
                 file.load_contents_async(null, cb.bind(that));
@@ -2137,6 +2132,62 @@ const Fan = class SystemMonitor_Fan extends ElementBase {
     }
 }
 
+const Power = class SystemMonitor_Power extends ElementBase {
+    constructor() {
+        super({
+            elt: 'power',
+            item_name: _('Power'),
+            color_name: ['power0']
+        });
+        this.power = 0;
+        this.display_error = true;
+        this.tip_format(_('W'));
+        Schema.connect('changed::' + this.elt + '-sensor-file', this.refresh.bind(this));
+        this.update();
+    }
+    refresh() {
+        let sfile = Schema.get_string(this.elt + '-sensor-file');
+        if (GLib.file_test(sfile, GLib.FileTest.EXISTS)) {
+            let file = Gio.file_new_for_path(sfile);
+            file.load_contents_async(null, (source, result) => {
+                let as_r = source.load_contents_finish(result)
+                this.power = parseInt(ByteArray.toString(as_r[1]))/1000000;
+            });
+        } else if (this.display_error) {
+            global.logError('error reading: ' + sfile);
+            this.display_error = false;
+        }
+    }
+    _apply() {
+        this.text_items[0].text = this.power.toFixed(1);
+        this.menu_items[0].text = this.power.toFixed(1);
+        this.vals = [Math.round(this.power*100)/100];
+        this.tip_vals[0] = this.power;
+    }
+    create_text_items() {
+        return [
+            new St.Label({
+                text: '',
+                style_class: Style.get('sm-status-value'),
+                y_align: Clutter.ActorAlign.CENTER}),
+            new St.Label({
+                text: _('W'), style_class: Style.get('sm-unit-label'),
+                y_align: Clutter.ActorAlign.CENTER})
+        ];
+    }
+    create_menu_items() {
+        return [
+            new St.Label({
+                text: '',
+                style_class: Style.get('sm-value')}),
+            new St.Label({
+                text: _('W'),
+                style_class: Style.get('sm-label')})
+        ];
+    }
+}
+
+
 const Gpu = class SystemMonitor_Gpu extends ElementBase {
     constructor() {
         super({
@@ -2386,6 +2437,7 @@ function enable() {
         Main.__sm.elts.push(new Gpu());
         Main.__sm.elts.push(new Thermal());
         Main.__sm.elts.push(new Fan());
+        Main.__sm.elts.push(new Power());
         Main.__sm.elts.push(new Battery());
 
         let tray = Main.__sm.tray;
