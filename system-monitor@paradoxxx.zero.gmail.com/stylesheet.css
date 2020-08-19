@@ -58,14 +58,14 @@
     padding: 0 5px 0 2px;
 }
 
-.sm-status-value {
-    min-width: 25px;
+.sm-status-value { /* memory */
+    min-width: 22px;
     text-align: right;
 }
 
 .sm-net-value {
     min-width: 40px;
-    text-align: center;
+    text-align: right;
 }
 
 .sm-disk-value {
@@ -74,7 +74,7 @@
 }
 
 .sm-big-status-value {
-    min-width: 42px;
+    min-width: 54px;
     text-align: right;
 }
 
