@@ -43,7 +43,7 @@
 }
 
 .sm-net-unit-label {
-    min-width: 25px;
+    min-width: 23px;
 }
 
 .sm-perc-label {
@@ -58,8 +58,8 @@
     padding: 0 5px 0 2px;
 }
 
-.sm-status-value { /* memory */
-    min-width: 22px;
+.sm-status-value { /* memory, temperature */
+    min-width: 23px;
     text-align: right;
 }
 
@@ -69,7 +69,7 @@
 }
 
 .sm-net-value {
-    min-width: 40px;
+    min-width: 35px;
     text-align: right;
 }
 
@@ -78,7 +78,7 @@
     text-align: right;
 }
 
-.sm-big-status-value {
+.sm-big-status-value { /* frequency */
     min-width: 54px;
     text-align: right;
 }

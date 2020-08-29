@@ -2172,7 +2172,7 @@ const Power = class SystemMonitor_Power extends ElementBase {
         return [
             new St.Label({
                 text: '',
-                style_class: Style.get('sm-status-value'),
+                style_class: Style.get('sm-power-value'),
                 y_align: Clutter.ActorAlign.CENTER}),
             new St.Label({
                 text: _('W'), style_class: Style.get('sm-unit-label'),
