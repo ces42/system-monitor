@@ -1868,7 +1868,7 @@ const Net = class SystemMonitor_Net extends ElementBase {
             if (this.tip_vals[0] < 1024) {
                 this.text_items[2].text = Style.netunits_kbytes();
                 this.menu_items[1].text = this.tip_unit_labels[0].text = _('KB/s');
-            } else {
+            } else if (this.tip_vals[0] < 1048576){
                 this.text_items[2].text = Style.netunits_mbytes();
                 this.menu_items[1].text = this.tip_unit_labels[0].text = _('MB/s');
                 this.tip_vals[0] = (this.tip_vals[0] / 1024).toPrecision(3);
@@ -1880,7 +1880,7 @@ const Net = class SystemMonitor_Net extends ElementBase {
             if (this.tip_vals[2] < 1024) {
                 this.text_items[5].text = Style.netunits_kbytes();
                 this.menu_items[4].text = this.tip_unit_labels[2].text = _('KB/s');
-            } else {
+            } else if (this.tip_vals[0] < 1048576){
                 this.text_items[5].text = Style.netunits_mbytes();
                 this.menu_items[4].text = this.tip_unit_labels[2].text = _('MB/s');
                 this.tip_vals[2] = (this.tip_vals[2] / 1024).toPrecision(3);
