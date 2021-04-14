@@ -217,8 +217,10 @@ const smStyleManager = class SystemMonitor_smStyleManager {
         this._diskunits = _('MB/s');
         this._netunits_kbytes = _('KB/s');
         this._netunits_mbytes = _('MB/s');
+        this._netunits_gbytes = _('GB/s');
         this._netunits_kbits = _('kbit/s');
         this._netunits_mbits = _('Mbit/s');
+        this._netunits_gbits = _('Gbit/s');
         this._pie_width = 300;
         this._pie_height = 300;
         this._pie_fontsize = 14;
@@ -234,8 +236,10 @@ const smStyleManager = class SystemMonitor_smStyleManager {
             this._diskunits = _('MB');
             this._netunits_kbytes = _('kB');
             this._netunits_mbytes = _('MB');
+            this._netunits_gbytes = _('GB');
             this._netunits_kbits = 'kb';
             this._netunits_mbits = 'Mb';
+            this._netunits_gbits = 'Gb';
             this._pie_width *= 4 / 5;
             this._pie_height *= 4 / 5;
             this._pie_fontsize = 12;
@@ -267,11 +271,17 @@ const smStyleManager = class SystemMonitor_smStyleManager {
     netunits_mbytes() {
         return this._netunits_mbytes;
     }
+    netunits_gbytes() {
+        return this._netunits_gbytes;
+    }
     netunits_kbits() {
         return this._netunits_kbits;
     }
     netunits_mbits() {
         return this._netunits_mbits;
+    }
+    netunits_gbits() {
+        return this._netunits_gbits;
     }
     pie_width() {
         return this._pie_width;
@@ -1713,7 +1723,7 @@ const Mem = class SystemMonitor_Mem extends ElementBase {
     create_menu_items() {
         let unit = _('MB');
         if (this.useGiB) {
-            unit = _('GiB');
+            unit = _('GB');
         }
         return [
             new St.Label({
@@ -1833,18 +1843,26 @@ const Net = class SystemMonitor_Net extends ElementBase {
             if (this.tip_vals[0] < 1000) {
                 this.text_items[2].text = Style.netunits_kbits();
                 this.menu_items[1].text = this.tip_unit_labels[0].text = _('kbit/s');
-            } else {
+            } else if (this.tip_vals[0] < 1000000) {
                 this.text_items[2].text = Style.netunits_mbits();
                 this.menu_items[1].text = this.tip_unit_labels[0].text = _('Mbit/s');
                 this.tip_vals[0] = (this.tip_vals[0] / 1000).toPrecision(3);
+            } else {
+                this.text_items[2].text = Style.netunits_gbits();
+                this.menu_items[1].text = this.tip_unit_labels[0].text = _('Gbit/s');
+                this.tip_vals[0] = (this.tip_vals[0] / 1000000).toPrecision(3);
             }
             if (this.tip_vals[2] < 1000) {
                 this.text_items[5].text = Style.netunits_kbits();
                 this.menu_items[4].text = this.tip_unit_labels[2].text = _('kbit/s');
-            } else {
+            } else if (this.tip_vals[2] < 1000000) {
                 this.text_items[5].text = Style.netunits_mbits();
                 this.menu_items[4].text = this.tip_unit_labels[2].text = _('Mbit/s');
                 this.tip_vals[2] = (this.tip_vals[2] / 1000).toPrecision(3);
+            } else {
+                this.text_items[5].text = Style.netunits_gbits();
+                this.menu_items[4].text = this.tip_unit_labels[2].text = _('Gbit/s');
+                this.tip_vals[2] = (this.tip_vals[2] / 1000000).toPrecision(3);
             }
         } else {
             if (this.tip_vals[0] < 1024) {
@@ -1854,6 +1872,10 @@ const Net = class SystemMonitor_Net extends ElementBase {
                 this.text_items[2].text = Style.netunits_mbytes();
                 this.menu_items[1].text = this.tip_unit_labels[0].text = _('MB/s');
                 this.tip_vals[0] = (this.tip_vals[0] / 1024).toPrecision(3);
+            } else {
+                this.text_items[2].text = Style.netunits_gbytes();
+                this.menu_items[1].text = this.tip_unit_labels[0].text = _('GB/s');
+                this.tip_vals[0] = (this.tip_vals[0] / 1048576).toPrecision(3);
             }
             if (this.tip_vals[2] < 1024) {
                 this.text_items[5].text = Style.netunits_kbytes();
@@ -1862,6 +1884,10 @@ const Net = class SystemMonitor_Net extends ElementBase {
                 this.text_items[5].text = Style.netunits_mbytes();
                 this.menu_items[4].text = this.tip_unit_labels[2].text = _('MB/s');
                 this.tip_vals[2] = (this.tip_vals[2] / 1024).toPrecision(3);
+            } else {
+                this.text_items[5].text = Style.netunits_gbytes();
+                this.menu_items[4].text = this.tip_unit_labels[2].text = _('GB/s');
+                this.tip_vals[2] = (this.tip_vals[2] / 1048576).toPrecision(3);
             }
         }
 
@@ -1935,7 +1961,7 @@ const Swap = class SystemMonitor_Swap extends ElementBase {
 
         GTop.glibtop_get_swap(this.gtop);
         this.total = Math.round(this.gtop.total / 1024 / 1024);
-        let threshold = 4 * 1024; // In MB
+        let threshold = 4 * 1024; // In MiB
         this.useGiB = false;
         this._unitConversion = 1024 * 1024;
         this._decimals = 100;
@@ -2229,7 +2255,7 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
     }
     _unit(total) {
         this.total = total;
-        let threshold = 4 * 1024; // In MB
+        let threshold = 4 * 1024; // In MiB
         this.useGiB = false;
         this._unitConversion = 1;
         this._decimals = 100;
