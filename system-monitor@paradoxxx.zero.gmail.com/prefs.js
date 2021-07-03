@@ -2,8 +2,8 @@ const Gtk = imports.gi.Gtk;
 const Gio = imports.gi.Gio;
 const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
-const Clutter = imports.gi.Clutter;
 const ByteArray = imports.byteArray;
+const Config = imports.misc.config;
 
 const Gettext = imports.gettext.domain('system-monitor');
 
@@ -17,6 +17,8 @@ const N_ = function (e) {
 };
 
 let Schema;
+
+const shellMajorVersion = parseInt(Config.PACKAGE_VERSION.split('.')[0]);
 
 function init() {
     convenience.initTranslations();
@@ -38,6 +40,13 @@ function color_to_hex(color) {
     return output;
 }
 
+function parse_bytearray(bytearray) {
+    if (!ByteArray.toString(bytearray).match(/GjsModule byteArray/)) {
+        return ByteArray.toString(bytearray);
+    }
+    return bytearray
+}
+
 function check_sensors(sensor_type) {
     const hwmon_path = '/sys/class/hwmon/';
     const hwmon_dir = Gio.file_new_for_path(hwmon_path);
@@ -49,12 +58,12 @@ function check_sensors(sensor_type) {
         if (file.query_exists(null)) {
             // load_contents (and even cat) fails with "Invalid argument" for some label files
             try {
-                const result = file.load_contents(null);
-                if (result[0]) {
-                    return N_(ByteArray.toString(result[1])).split('\n')[0].capitalize();
+                let [success, contents] = file.load_contents(null);
+                if (success) {
+                    return String(parse_bytearray(contents)).split('\n')[0];
                 }
             } catch (e) {
-                global.log('[System monitor] error loading label from file ' + file.get_path() + ': ' + e);
+                log('[System monitor] error loading label from file ' + file.get_path() + ': ' + e);
             }
         }
         return null;
@@ -64,7 +73,7 @@ function check_sensors(sensor_type) {
         const chip_children = chip_dir.enumerate_children(
             'standard::name,standard::type', Gio.FileQueryInfoFlags.NONE, null);
         if (!chip_children) {
-            global.log('[System monitor] error enumerating children of chip ' + chip_dir.get_path());
+            log('[System monitor] error enumerating children of chip ' + chip_dir.get_path());
             return false;
         }
 
@@ -93,7 +102,7 @@ function check_sensors(sensor_type) {
     const hwmon_children = hwmon_dir.enumerate_children(
         'standard::name,standard::type', Gio.FileQueryInfoFlags.NONE, null);
     if (!hwmon_children) {
-        global.log('[System monitor] error enumerating hwmon children');
+        log('[System monitor] error enumerating hwmon children');
         return [[], []];
     }
 
@@ -117,12 +126,62 @@ function check_sensors(sensor_type) {
     return [sensor_files, sensor_labels];
 }
 
+/**
+ * @param args.hasBorder Whether the box has a border (true) or not
+ * @param args.horizontal Whether the box is horizontal (true)
+ *      or vertical (false)
+ * @param args.shouldPack Determines whether a horizontal box should have
+ *      uniform spacing for its children. Only applies to horizontal boxes
+ * @param args.spacing The amount of spacing for a given box
+ * @returns a new Box with settings specified by args
+ */
+function box(args = {}) {
+    const options = { };
+
+    if (typeof args.spacing !== 'undefined') {
+        options.spacing = args.spacing;
+    }
+
+    if (shellMajorVersion < 40) {
+        if (args.hasBorder) {
+            options.border_width = 10;
+        }
+
+        return args.horizontal ?
+            new Gtk.HBox(options) : new Gtk.VBox(options);
+    }
+
+    if (args.hasBorder) {
+        options.margin_top = 10;
+        options.margin_bottom = 10;
+        options.margin_start = 10;
+        options.margin_end = 10;
+    }
+
+    options.orientation = args.horizontal ?
+        Gtk.Orientation.HORIZONTAL : Gtk.Orientation.VERTICAL;
+
+    const aliasBox = new Gtk.Box(options);
+
+    if (args.shouldPack) {
+        aliasBox.set_homogeneous(true);
+    }
+
+
+    aliasBox.add = aliasBox.append;
+    aliasBox.pack_start = aliasBox.prepend;
+    // normally, this would be append; it is aliased to prepend because
+    // that appears to yield the same behavior as version < 40
+    aliasBox.pack_end = aliasBox.prepend;
+
+    return aliasBox;
+}
 
 const ColorSelect = class SystemMonitor_ColorSelect {
     constructor(name) {
         this.label = new Gtk.Label({label: name + _(':')});
         this.picker = new Gtk.ColorButton();
-        this.actor = new Gtk.HBox({spacing: 5});
+        this.actor = box({horizontal: true, spacing: 5});
         this.actor.add(this.label);
         this.actor.add(this.picker);
         this.picker.set_use_alpha(true);
@@ -140,7 +199,7 @@ const IntSelect = class SystemMonitor_IntSelect {
     constructor(name) {
         this.label = new Gtk.Label({label: name + _(':')});
         this.spin = new Gtk.SpinButton();
-        this.actor = new Gtk.HBox();
+        this.actor = box({horizontal: true, shouldPack: true, });
         this.actor.add(this.label);
         this.actor.add(this.spin);
         this.spin.set_numeric(true);
@@ -159,7 +218,7 @@ const Select = class SystemMonitor_Select {
         this.label = new Gtk.Label({label: name + _(':')});
         // this.label.set_justify(Gtk.Justification.RIGHT);
         this.selector = new Gtk.ComboBoxText();
-        this.actor = new Gtk.HBox({spacing: 5});
+        this.actor = box({horizontal: true, shouldPack: true, spacing: 5});
         this.actor.add(this.label);
         this.actor.add(this.selector);
     }
@@ -189,35 +248,82 @@ const SettingFrame = class SystemMonitor {
     constructor(name, schema) {
         this.schema = schema;
         this.label = new Gtk.Label({label: name});
-        this.frame = new Gtk.Frame({border_width: 10});
 
-        this.vbox = new Gtk.VBox({spacing: 20});
-        this.hbox0 = new Gtk.HBox({spacing: 20});
-        this.hbox1 = new Gtk.HBox({spacing: 20});
-        this.hbox2 = new Gtk.HBox({spacing: 20});
-        this.hbox3 = new Gtk.HBox({spacing: 20});
-        this.frame.add(this.vbox);
-        this.vbox.pack_start(this.hbox0, true, false, 0);
-        this.vbox.pack_start(this.hbox1, true, false, 0);
-        this.vbox.pack_start(this.hbox2, true, false, 0);
-        this.vbox.pack_start(this.hbox3, true, false, 0);
+        this.vbox = box({horizontal: false, shouldPack: true, spacing: 20});
+        this.hbox0 = box({horizontal: true, shouldPack: true, spacing: 20});
+        this.hbox1 = box({horizontal: true, shouldPack: true, spacing: 20});
+        this.hbox2 = box({horizontal: true, shouldPack: true, spacing: 20});
+        this.hbox3 = box({horizontal: true, shouldPack: true, spacing: 20});
+
+        if (shellMajorVersion < 40) {
+            this.frame = new Gtk.Frame({border_width: 10});
+            this.frame.add(this.vbox);
+        } else {
+            this.frame = new Gtk.Frame({
+                margin_top: 10,
+                margin_bottom: 10,
+                margin_start: 10,
+                margin_end: 10
+            });
+            this.frame.set_child(this.vbox);
+        }
+
+
+        if (shellMajorVersion < 40) {
+            this.vbox.pack_start(this.hbox0, true, false, 0);
+            this.vbox.pack_start(this.hbox1, true, false, 0);
+            this.vbox.pack_start(this.hbox2, true, false, 0);
+            this.vbox.pack_start(this.hbox3, true, false, 0);
+        } else {
+            this.vbox.append(this.hbox0);
+            this.vbox.append(this.hbox1);
+            this.vbox.append(this.hbox2);
+            this.vbox.append(this.hbox3);
+        }
     }
 
     /** Enforces child ordering of first 2 boxes by label */
     _reorder() {
-        /** @return {string} label of/inside component */
-        const labelOf = el => {
-            if (el.get_children) {
-                return labelOf(el.get_children()[0]);
+        if (shellMajorVersion < 40) {
+            /** @return {string} label of/inside component */
+            const labelOf = el => {
+                if (el.get_children) {
+                    return labelOf(el.get_children()[0]);
+                }
+                return el && el.label || '';
+            };
+            [this.hbox0, this.hbox1].forEach(hbox => {
+                hbox.get_children()
+                    .sort((c1, c2) => labelOf(c1).localeCompare(labelOf(c2)))
+                    .forEach((child, index) => hbox.reorder_child(child, index));
+            });
+        } else {
+            /** @return {string} label of/inside component */
+            const labelOf = el => {
+                if (el.get_label) {
+                    return el.get_label();
+                }
+                return labelOf(el.get_first_child());
             }
-            return el && el.label || '';
-        };
 
-        [this.hbox0, this.hbox1].forEach(box => {
-            box.get_children()
-                .sort((c1, c2) => labelOf(c1).localeCompare(labelOf(c2)))
-                .forEach((child, index) => box.reorder_child(child, index));
-        });
+            [this.hbox0, this.hbox1].forEach(hbox => {
+                const children = [];
+                let next = hbox.get_first_child();
+
+                while (next !== null) {
+                    children.push(next);
+                    next = next.get_next_sibling();
+                }
+
+                const sorted = children
+                    .sort((c1, c2) => labelOf(c1).localeCompare(labelOf(c2)));
+
+                sorted
+                    .forEach((child, index) => {
+                        hbox.reorder_child_after(child, sorted[index - 1] || null);
+                    });
+            });
+        }
     }
 
     add(key) {
@@ -266,33 +372,29 @@ const SettingFrame = class SystemMonitor {
                 set_color(color, Schema, key);
             });
         } else if (config.match(/sensor/)) {
+            let sensor_type = configParent === 'fan' ? 'fan' : 'temp';
+            let [_slist, _strlist] = check_sensors(sensor_type);
             let item = new Select(_('Sensor'));
-            if (configParent === 'power') {
-                // maybe do something?
-            } else {
-                let sensor_type = configParent === 'fan' ? 'fan' : 'temp';
-                let [_slist, _strlist] = check_sensors(sensor_type);
-                if (_slist.length === 0) {
-                    item.add([_('Please install lm-sensors')]);
-                } else if (_slist.length === 1) {
-                    this.schema.set_string(key, _slist[0]);
-                }
-                item.add(_strlist);
-                try {
-                    item.set_value(_slist.indexOf(this.schema.get_string(key)));
-                } catch (e) {
-                    item.set_value(0);
-                }
-                // this.hbox3.add(item.actor);
-                if (configParent === 'fan') {
-                    this.hbox2.pack_end(item.actor, true, false, 0);
-                } else {
-                    this.hbox2.pack_start(item.actor, true, false, 0);
-                }
-                item.selector.connect('changed', function (combo) {
-                    set_string(combo, Schema, key, _slist);
-                });
+            if (_slist.length === 0) {
+                item.add([_('Please install lm-sensors')]);
+            } else if (_slist.length === 1) {
+                this.schema.set_string(key, _slist[0]);
             }
+            item.add(_strlist);
+            try {
+                item.set_value(_slist.indexOf(this.schema.get_string(key)));
+            } catch (e) {
+                item.set_value(0);
+            }
+            // this.hbox3.add(item.actor);
+            if (configParent === 'fan') {
+                this.hbox2.pack_end(item.actor, true, false, 0);
+            } else {
+                this.hbox2.pack_start(item.actor, true, false, 0);
+            }
+            item.selector.connect('changed', function (combo) {
+                set_string(combo, Schema, key, _slist);
+            });
         // hbox3
         } else if (config === 'speed-in-bits') {
             let item = new Gtk.CheckButton({label: _('Show network speed in bits')});
@@ -350,25 +452,17 @@ const App = class SystemMonitor_App {
             this.settings[setting] = new SettingFrame(_(setting.capitalize()), Schema);
         });
 
-        this.main_vbox = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL,
-            spacing: 10,
-            border_width: 10});
-        this.hbox1 = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 20,
-            border_width: 10
-        });
+        this.main_vbox = box({
+            hasBorder: true, horizontal: false, spacing: 10});
+        this.hbox1 = box({
+            hasBorder: true, horizontal: true, shouldPack: true, spacing: 20});
         this.main_vbox.pack_start(this.hbox1, false, false, 0);
 
         keys.forEach((key) => {
             if (key === 'icon-display') {
                 let item = new Gtk.CheckButton({label: _('Display Icon')});
-                // item.set_active(Schema.get_boolean(key))
                 this.items.push(item)
                 this.hbox1.add(item)
-                /* item.connect('toggled', function(check) {
-                    set_boolean(check, Schema, key);
-                });*/
                 Schema.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
             } else if (key === 'panel-position') {
                 let item = new Select(_('Panel Position'));
@@ -391,7 +485,6 @@ const App = class SystemMonitor_App {
                 Schema.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
             } else if (key === 'move-clock') {
                 let item = new Gtk.CheckButton({label: _('Move the clock')})
-                // item.set_active(Schema.get_boolean(key))
                 this.items.push(item)
                 this.hbox1.add(item)
                 Schema.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -413,10 +506,16 @@ const App = class SystemMonitor_App {
         this.notebook = new Gtk.Notebook()
         setting_items.forEach((setting) => {
             this.notebook.append_page(this.settings[setting].frame, this.settings[setting].label)
-            this.main_vbox.pack_start(this.notebook, true, true, 0)
-            this.main_vbox.show_all();
+            if (shellMajorVersion < 40) {
+                this.main_vbox.show_all();
+                this.main_vbox.pack_start(this.notebook, true, true, 0)
+            } else {
+                this.main_vbox.append(this.notebook);
+            }
         });
-        this.main_vbox.show_all();
+        if (shellMajorVersion < 40) {
+            this.main_vbox.show_all();
+        }
     }
 }
 

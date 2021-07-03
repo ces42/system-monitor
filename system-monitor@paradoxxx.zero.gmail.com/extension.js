@@ -742,15 +742,15 @@ const TipMenu = class SystemMonitor_TipMenu extends PopupMenu.PopupMenuBase {
 
         let sourceTopLeftX = 0;
         let sourceTopLeftY = 0;
-        if (typeof this.sourceActor.get_transformed_extents === "function") {
-                let extents = this.sourceActor.get_transformed_extents();
-                let sourceTopLeft = extents.get_top_left();
-                sourceTopLeftY = sourceTopLeft.y;
-                sourceTopLeftX = sourceTopLeft.x;
+        if (typeof this.sourceActor.get_transformed_extents === 'function') {
+            let extents = this.sourceActor.get_transformed_extents();
+            let sourceTopLeft = extents.get_top_left();
+            sourceTopLeftY = sourceTopLeft.y;
+            sourceTopLeftX = sourceTopLeft.x;
         } else {
-                let allocation = Shell.util_get_transformed_allocation(this.sourceActor);
-                sourceTopLeftY = allocation.y1;
-                sourceTopLeftX = allocation.x1;
+            let allocation = Shell.util_get_transformed_allocation(this.sourceActor);
+            sourceTopLeftY = allocation.y1;
+            sourceTopLeftX = allocation.x1;
         }
         let monitor = Main.layoutManager.findMonitorForActor(this.sourceActor);
         let [x, y] = [sourceTopLeftX + contentbox.x1,
@@ -922,8 +922,10 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
         this.interval = l_limit(Schema.get_int(this.elt + '-refresh-time'));
         this.timeout = Mainloop.timeout_add(
             this.interval,
-            this.update.bind(this)
+            this.update.bind(this),
+            GLib.PRIORITY_DEFAULT_IDLE
         );
+
         Schema.connect(
             'changed::' + this.elt + '-refresh-time',
             (schema, key) => {
@@ -931,7 +933,7 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
                 this.timeout = null;
                 this.interval = l_limit(Schema.get_int(key));
                 this.timeout = Mainloop.timeout_add(
-                    this.interval, this.update.bind(this));
+                    this.interval, this.update.bind(this), GLib.PRIORITY_DEFAULT_IDLE);
             });
         Schema.connect('changed::' + this.elt + '-graph-width',
             this.chart.resize.bind(this.chart));
@@ -943,7 +945,7 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
                     this.timeout = null;
                     this.reset_style();
                     this.timeout = Mainloop.timeout_add(
-                        this.interval, this.update.bind(this));
+                        this.interval, this.update.bind(this), GLib.PRIORITY_DEFAULT_IDLE);
                 });
         }
 
@@ -2287,11 +2289,18 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
             global.logError('gpu_usage.sh invocation failed');
         }
     }
+    _sanitizeUsageValue(val) {
+        val = parseInt(val);
+        if (isNaN(val)) {
+            val = 0
+        }
+        return val;
+    }
     _readTemperature(procOutput) {
         let usage = procOutput.split('\n');
-        let memTotal = parseInt(usage[0]);
-        let memUsed = parseInt(usage[1]);
-        this.percentage = parseInt(usage[2]);
+        let memTotal = this._sanitizeUsageValue(usage[0]);
+        let memUsed = this._sanitizeUsageValue(usage[1]);
+        this.percentage = this._sanitizeUsageValue(usage[2]);
         if (typeof this.useGiB === 'undefined') {
             this._unit(memTotal);
             this._update_unit();
