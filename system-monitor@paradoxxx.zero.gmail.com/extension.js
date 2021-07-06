@@ -2479,14 +2479,14 @@ function enable() {
                 return true;
             });
     } else {
-        let panel = Main.panel._rightBox;
+        let panel = Main.panel._centerBox;
         StatusArea = Main.panel._statusArea;
         if (typeof (StatusArea) === 'undefined') {
             StatusArea = Main.panel.statusArea;
         }
-        if (Schema.get_boolean('center-display')) {
-            panel = Main.panel._centerBox;
-        }
+        //if (Schema.get_boolean('center-display')) {
+            //panel = Main.panel._centerBox;
+        //}
 
         MountsMonitor.connect();
 
@@ -2509,6 +2509,7 @@ function enable() {
         Main.__sm.elts.push(new Gpu());
         Main.__sm.elts.push(new Thermal());
         Main.__sm.elts.push(new Fan());
+        Main.__sm.elts.push(new Power());
         Main.__sm.elts.push(new Battery());
 
         let tray = Main.__sm.tray;
