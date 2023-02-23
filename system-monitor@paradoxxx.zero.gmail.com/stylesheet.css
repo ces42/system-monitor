@@ -32,7 +32,8 @@
 .sm-unit-label,
 .sm-net-unit-label {
     color: #aaa;
-    font-size: 0.625em;
+    /* font-size: 0.625em; */
+    font-size: 0.5em;
     padding: 0 5px 0 2px;
 }
 

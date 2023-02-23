@@ -475,9 +475,11 @@ const App = class SystemMonitor_App {
 
         this.items = [];
         this.settings = [];
+        this.frameToLabel = {}; // Maps Gtk.Widget to the English name of the setting
 
         setting_items.forEach((setting) => {
             this.settings[setting] = new SettingFrame(_(setting.capitalize()), Schema);
+            this.frameToLabel[this.settings[setting].frame] = setting;
         });
 
         this.main_vbox = box({
