@@ -207,10 +207,10 @@ const smStyleManager = class SystemMonitor_smStyleManager {
     constructor() {
         this._extension = '';
         this._iconsize = 1;
-        this._diskunits = _('MB/s');
-        this._netunits_kbytes = _('KB/s');
-        this._netunits_mbytes = _('MB/s');
-        this._netunits_gbytes = _('GB/s');
+        this._diskunits = _('MiB/s');
+        this._netunits_kbytes = _('KiB/s');
+        this._netunits_mbytes = _('MiB/s');
+        this._netunits_gbytes = _('GiB/s');
         this._netunits_kbits = _('kbit/s');
         this._netunits_mbits = _('Mbit/s');
         this._netunits_gbits = _('Gbit/s');
@@ -1395,18 +1395,13 @@ const Cpu = class SystemMonitor_Cpu extends ElementBase {
     }
     _apply() {
         let percent = 0;
-        //let raw = 0;
         if (this.cpuid === -1) {
-            //raw = Math.round((100 * this.total_cores) - this.usage[3])
-            //percent = Math.round(raw /
-            //                     this.total_cores);
-            percent = Math.round(((100 * this.total_cores) - this.usage[3]) / this.total_cores)
+            percent = Math.round(((100 * this.total_cores) - this.usage[3]) /
+                                 this.total_cores);
         } else {
-            //raw = percent = Math.round((100 - this.usage[3]));
             percent = Math.round((100 - this.usage[3]));
         }
 
-        //this.text_items[0].text = this.menu_items[0].text = raw.toString();
         this.text_items[0].text = this.menu_items[0].text = percent.toString();
         let other = 100;
         for (let i = 0; i < this.usage.length; i++) {
@@ -1437,7 +1432,6 @@ const Cpu = class SystemMonitor_Cpu extends ElementBase {
         return [
             new St.Label({
                 text: '',
-                //style_class: Style.get('sm-net-value'),
                 style_class: Style.get('sm-status-value'),
                 y_align: Clutter.ActorAlign.CENTER}),
             new St.Label({
@@ -2118,9 +2112,6 @@ const Thermal = class SystemMonitor_Thermal extends ElementBase {
             file.load_contents_async(null, (source, result) => {
                 let as_r = source.load_contents_finish(result)
                 this.temperature = Math.round(parseInt(parse_bytearray(as_r[1])) / 1000);
-                if (this.fahrenheit_unit) {
-                    this.temperature = Math.round(this.temperature * 1.8 + 32);
-                }
             });
         } else if (this.display_error) {
             global.logError('error reading: ' + sfile);
@@ -2238,11 +2229,12 @@ const Power = class SystemMonitor_Power extends ElementBase {
         this.power = 0;
         this.display_error = true;
         this.tip_format(_('W'));
-        Schema.connect('changed::' + this.elt + '-sensor-file', this.refresh.bind(this));
+        // Schema.connect('changed::' + this.elt + '-sensor-file', this.refresh.bind(this));
         this.update();
     }
     refresh() {
-        let sfile = Schema.get_string(this.elt + '-sensor-file');
+        //let sfile = Schema.get_string(this.elt + '-sensor-file');
+        let sfile = '/sys/class/power_supply/BAT1/power_now';
         if (GLib.file_test(sfile, GLib.FileTest.EXISTS)) {
             let file = Gio.file_new_for_path(sfile);
             file.load_contents_async(null, (source, result) => {
@@ -2491,14 +2483,14 @@ function enable() {
                 return true;
             });
     } else {
-        let panel = Main.panel._centerBox;
+        let panel = Main.panel._rightBox;
         StatusArea = Main.panel._statusArea;
         if (typeof (StatusArea) === 'undefined') {
             StatusArea = Main.panel.statusArea;
         }
-        //if (Schema.get_boolean('center-display')) {
-            //panel = Main.panel._centerBox;
-        //}
+        if (Schema.get_boolean('center-display')) {
+            panel = Main.panel._centerBox;
+        }
 
         MountsMonitor.connect();
 
@@ -2512,20 +2504,35 @@ function enable() {
         };
 
         // Items to Monitor
-        Main.__sm.elts = createCpus();
-        Main.__sm.elts.push(new Freq());
-        Main.__sm.elts.push(new Mem());
-        Main.__sm.elts.push(new Swap());
-        Main.__sm.elts.push(new Net());
-        Main.__sm.elts.push(new Disk());
-        Main.__sm.elts.push(new Gpu());
-        Main.__sm.elts.push(new Thermal());
-        Main.__sm.elts.push(new Fan());
-        Main.__sm.elts.push(new Power());
-        //Main.__sm.elts.push(new Battery());
-
         let tray = Main.__sm.tray;
         let elts = Main.__sm.elts;
+
+        // Load the preferred position of the displays and insert them in said order.
+        const positionList = {};
+        // CPUs are inserted differently, so cpu-position is stored apart
+        const cpuPosition = Schema.get_int('cpu-position');
+        positionList[cpuPosition] = createCpus();
+        positionList[Schema.get_int('freq-position')] = new Freq();
+        positionList[Schema.get_int('memory-position')] = new Mem();
+        positionList[Schema.get_int('swap-position')] = new Swap();
+        positionList[Schema.get_int('net-position')] = new Net();
+        positionList[Schema.get_int('disk-position')] = new Disk();
+        positionList[Schema.get_int('gpu-position')] = new Gpu();
+        positionList[Schema.get_int('thermal-position')] = new Thermal();
+        positionList[Schema.get_int('fan-position')] = new Fan();
+        //positionList[Schema.get_int('battery-position')] = new Battery();
+        positionList[Schema.get_int('power-position')] = new Power();
+
+        for (let i = 0; i < Object.keys(positionList).length; i++) {
+            if (i === cpuPosition) {
+                // CPUs are in an array, store them one by one
+                for (let cpu of positionList[cpuPosition]) {
+                    elts.push(cpu);
+                }
+            } else {
+                elts.push(positionList[i]);
+            }
+        }
 
         if (Schema.get_boolean('move-clock')) {
             let dateMenu = Main.panel.statusArea.dateMenu;
@@ -2621,6 +2628,10 @@ function enable() {
         });
         tray.menu.addMenuItem(item);
         Main.panel.menuManager.addMenu(tray.menu);
+
+        if (shell_Version >= '42') {
+            Main.sessionMode.connect('updated', _onSessionModeChanged);
+        }
     }
     log('[System monitor] applet enabling done');
 }

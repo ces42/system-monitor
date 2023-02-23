@@ -454,18 +454,23 @@ const SettingFrame = class SystemMonitor {
             this.hbox3.add(item.actor);
             Schema.bind(key, item.spin, 'value', Gio.SettingsBindFlags.DEFAULT);
         }
-        if (configParent.indexOf('gpu') !== -1 &&
-            config === 'display') {
-            let item = new Gtk.Label({label: _('** Only Nvidia GPUs supported so far **')});
-            this.hbox3.add(item);
-        }
         this._reorder();
     }
 }
 
 const App = class SystemMonitor_App {
     constructor() {
-        let setting_items = ['cpu', 'memory', 'swap', 'net', 'disk', 'gpu', 'thermal', 'fan', 'power', 'freq', 'battery'];
+        let setting_names = ['cpu', 'memory', 'swap', 'net', 'disk', 'gpu', 'thermal', 'fan', 'freq', 'power', /*'battery'*/];
+        let ordered_items = {};
+        let setting_items = [];
+        // Get preferred position of the tabs
+        for (let item of setting_names) {
+            ordered_items[Schema.get_int(item + '-position')] = item;
+        }
+        // Populate setting_items with the names in order of preference
+        for (let i = 0; i < Object.keys(ordered_items).length; i++) {
+            setting_items.push(ordered_items[i]);
+        }
         let keys = Schema.list_keys();
 
         this.items = [];
@@ -491,14 +496,11 @@ const App = class SystemMonitor_App {
                 this.items.push(item)
                 this.hbox1.add(item)
                 Schema.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
-            } else if (key === 'panel-position') {
-                let item = new Select(_('Panel Position'));
-                item.add([_('Right'), _('Center'), _('Left')]);
-                item.set_value(Schema.get_enum(key));
-                this.hbox1.add(item.actor);
-                item.selector.connect('changed', function (style) {
-                    set_enum(style, Schema, key);
-                });
+            } else if (key === 'center-display') {
+                let item = new Gtk.CheckButton({label: _('Display in the Middle')})
+                this.items.push(item)
+                this.hbox1.add(item)
+                Schema.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
             } else if (key === 'compact-display') {
                 let item = new Gtk.CheckButton({label: _('Compact Display')})
                 this.items.push(item)
@@ -510,8 +512,19 @@ const App = class SystemMonitor_App {
                 this.items.push(item)
                 this.hbox1.add(item)
                 Schema.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
+            } else if (key === 'tooltip-delay-ms') {
+                let item = new IntSelect(_('Tooltip delay'));
+                item.set_args(0, 100000, 50, 1000);
+                this.items.push(item)
+                this.hbox1.add(item.actor);
+                Schema.bind(key, item.spin, 'value', Gio.SettingsBindFlags.DEFAULT);
             } else if (key === 'move-clock') {
                 let item = new Gtk.CheckButton({label: _('Move the clock')})
+                this.items.push(item)
+                this.hbox1.add(item)
+                Schema.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
+            } else if (key === 'show-on-lockscreen') {
+                let item = new Gtk.CheckButton({label: _('Show on lockscreen')})
                 this.items.push(item)
                 this.hbox1.add(item)
                 Schema.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -534,9 +547,20 @@ const App = class SystemMonitor_App {
                 }
             }
         });
-        this.notebook = new Gtk.Notebook()
+
+        this.notebook = new Gtk.Notebook();
+        this.notebook.connect('page-reordered', (widget_, pageNum_) => {
+            // After a page has been moved, update the order preferences
+            for (let i = 0; i < this.notebook.get_n_pages(); i++) {
+                let frame = this.notebook.get_nth_page(i);
+                let name = this.frameToLabel[frame];
+                Schema.set_int(name + '-position', i);
+            }
+        });
+
         setting_items.forEach((setting) => {
             this.notebook.append_page(this.settings[setting].frame, this.settings[setting].label)
+            this.notebook.set_tab_reorderable(this.settings[setting].frame, true);
             if (shellMajorVersion < 40) {
                 this.main_vbox.show_all();
                 this.main_vbox.pack_start(this.notebook, true, true, 0)
