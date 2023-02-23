@@ -1395,13 +1395,18 @@ const Cpu = class SystemMonitor_Cpu extends ElementBase {
     }
     _apply() {
         let percent = 0;
+        //let raw = 0;
         if (this.cpuid === -1) {
-            percent = Math.round(((100 * this.total_cores) - this.usage[3]) /
-                                 this.total_cores);
+            //raw = Math.round((100 * this.total_cores) - this.usage[3])
+            //percent = Math.round(raw /
+            //                     this.total_cores);
+            percent = Math.round(((100 * this.total_cores) - this.usage[3]) / this.total_cores)
         } else {
+            //raw = percent = Math.round((100 - this.usage[3]));
             percent = Math.round((100 - this.usage[3]));
         }
 
+        //this.text_items[0].text = this.menu_items[0].text = raw.toString();
         this.text_items[0].text = this.menu_items[0].text = percent.toString();
         let other = 100;
         for (let i = 0; i < this.usage.length; i++) {
@@ -1432,6 +1437,7 @@ const Cpu = class SystemMonitor_Cpu extends ElementBase {
         return [
             new St.Label({
                 text: '',
+                //style_class: Style.get('sm-net-value'),
                 style_class: Style.get('sm-status-value'),
                 y_align: Clutter.ActorAlign.CENTER}),
             new St.Label({
@@ -1653,7 +1659,8 @@ const Freq = class SystemMonitor_Freq extends ElementBase {
                 style_class: Style.get('sm-big-status-value'),
                 y_align: Clutter.ActorAlign.CENTER}),
             new St.Label({
-                text: 'GHz', style_class: Style.get('sm-perc-label'),
+                //text: 'GHz', style_class: Style.get('sm-perc-label'),
+                text: '', style_class: Style.get('sm-perc-label'),
                 y_align: Clutter.ActorAlign.CENTER})
         ];
     }
@@ -1900,29 +1907,29 @@ const Net = class SystemMonitor_Net extends ElementBase {
                 this.tip_vals[2] = (this.tip_vals[2] / 1000000).toPrecision(3);
             }
         } else {
-            if (this.tip_vals[0] < 1024) {
+            if (this.tip_vals[0] < 1000) {
                 this.text_items[2].text = Style.netunits_kbytes();
                 this.menu_items[1].text = this.tip_unit_labels[0].text = _('KiB/s');
-            } else if (this.tip_vals[0] < 1048576) {
+            } else if (this.tip_vals[0] < 1000_000) {
                 this.text_items[2].text = Style.netunits_mbytes();
                 this.menu_items[1].text = this.tip_unit_labels[0].text = _('MiB/s');
-                this.tip_vals[0] = (this.tip_vals[0] / 1024).toPrecision(3);
+                this.tip_vals[0] = (this.tip_vals[0] / 1024).toPrecision(this.tip_vals[0] >= 1024 ? 3 : 2);
             } else {
                 this.text_items[2].text = Style.netunits_gbytes();
                 this.menu_items[1].text = this.tip_unit_labels[0].text = _('GiB/s');
-                this.tip_vals[0] = (this.tip_vals[0] / 1048576).toPrecision(3);
+                this.tip_vals[0] = (this.tip_vals[0] / 1048576).toPrecision(this.tip_vals[0] >= 1024*1024 ? 3 : 2);
             }
-            if (this.tip_vals[2] < 1024) {
+            if (this.tip_vals[2] < 1000) {
                 this.text_items[5].text = Style.netunits_kbytes();
                 this.menu_items[4].text = this.tip_unit_labels[2].text = _('KiB/s');
-            } else if (this.tip_vals[2] < 1048576) {
+            } else if (this.tip_vals[2] < 1000_000) {
                 this.text_items[5].text = Style.netunits_mbytes();
                 this.menu_items[4].text = this.tip_unit_labels[2].text = _('MiB/s');
-                this.tip_vals[2] = (this.tip_vals[2] / 1024).toPrecision(3);
+                this.tip_vals[2] = (this.tip_vals[2] / 1024).toPrecision(this.tip_vals[2] >= 1024 ? 3 : 2);
             } else {
                 this.text_items[5].text = Style.netunits_gbytes();
                 this.menu_items[4].text = this.tip_unit_labels[2].text = _('GiB/s');
-                this.tip_vals[2] = (this.tip_vals[2] / 1048576).toPrecision(3);
+                this.tip_vals[2] = (this.tip_vals[2] / 1048576).toPrecision(this.tip_vals[2] >= 1024*1024 ? 3 : 2);
             }
         }
 
@@ -2515,7 +2522,7 @@ function enable() {
         Main.__sm.elts.push(new Thermal());
         Main.__sm.elts.push(new Fan());
         Main.__sm.elts.push(new Power());
-        Main.__sm.elts.push(new Battery());
+        //Main.__sm.elts.push(new Battery());
 
         let tray = Main.__sm.tray;
         let elts = Main.__sm.elts;
