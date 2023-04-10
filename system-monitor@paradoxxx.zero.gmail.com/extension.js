@@ -208,10 +208,10 @@ const smStyleManager = class SystemMonitor_smStyleManager {
     constructor() {
         this._extension = '';
         this._iconsize = 1;
-        this._diskunits = _('MiB/s');
-        this._netunits_kbytes = _('KiB/s');
-        this._netunits_mbytes = _('MiB/s');
-        this._netunits_gbytes = _('GiB/s');
+        this._diskunits = _('MB/s');
+        this._netunits_kbytes = _('KB/s');
+        this._netunits_mbytes = _('MB/s');
+        this._netunits_gbytes = _('GB/s');
         this._netunits_kbits = _('kbit/s');
         this._netunits_mbits = _('Mbit/s');
         this._netunits_gbits = _('Gbit/s');
@@ -1563,7 +1563,7 @@ const Disk = class SystemMonitor_Disk extends ElementBase {
                 style_class: Style.get('sm-disk-unit-label'),
                 y_align: Clutter.ActorAlign.CENTER}),
             new St.Label({
-                text: _('W'),
+                text: 'W',
                 style_class: Style.get('sm-status-label')}),
             new St.Label({
                 text: '',
@@ -1593,7 +1593,7 @@ const Disk = class SystemMonitor_Disk extends ElementBase {
                 text: Style.diskunits(),
                 style_class: Style.get('sm-label')}),
             new St.Label({
-                text: ' ' + _('W'),
+                text: ' ' + 'W',
                 style_class: Style.get('sm-label')})
         ];
     }
@@ -2145,6 +2145,7 @@ const Thermal = class SystemMonitor_Thermal extends ElementBase {
                 style_class: Style.get('sm-status-value'),
                 y_align: Clutter.ActorAlign.CENTER}),
             new St.Label({
+                // text: this.temperature_symbol(),
                 text: this.temperature_symbol(),
                 style_class: Style.get('sm-temp-label'),
                 y_align: Clutter.ActorAlign.CENTER})
@@ -2236,7 +2237,7 @@ const Power = class SystemMonitor_Power extends ElementBase {
         });
         this.power = 0;
         this.display_error = true;
-        this.tip_format(_('W'));
+        this.tip_format('W');
         // Schema.connect('changed::' + this.elt + '-sensor-file', this.refresh.bind(this));
         this.update();
     }
@@ -2267,7 +2268,7 @@ const Power = class SystemMonitor_Power extends ElementBase {
                 style_class: Style.get('sm-power-value'),
                 y_align: Clutter.ActorAlign.CENTER}),
             new St.Label({
-                text: _('W'), style_class: Style.get('sm-unit-label'),
+                text: 'W', style_class: Style.get('sm-unit-label'),
                 y_align: Clutter.ActorAlign.CENTER})
         ];
     }
@@ -2277,7 +2278,8 @@ const Power = class SystemMonitor_Power extends ElementBase {
                 text: '',
                 style_class: Style.get('sm-value')}),
             new St.Label({
-                text: _('W'),
+                // text: 'W',
+                text: 'W',
                 style_class: Style.get('sm-label')})
         ];
     }
@@ -2551,12 +2553,12 @@ function enable() {
             }
         }
 
-        if (Schema.get_boolean('move-clock')) {
+        /* if (Schema.get_boolean('move-clock')) {
             let dateMenu = Main.panel.statusArea.dateMenu;
             Main.panel._centerBox.remove_actor(dateMenu.container);
             Main.panel._addToPanelBox('dateMenu', dateMenu, -1, Main.panel._rightBox);
             tray.clockMoved = true;
-        }
+        } */
 
         Schema.connect('changed::background', (schema, key) => {
             Background = color_from_string(Schema.get_string(key));
@@ -2655,11 +2657,11 @@ function enable() {
 
 function disable() {
     // restore clock
-    if (Main.__sm.tray.clockMoved) {
+    /* if (Main.__sm.tray.clockMoved) {
         let dateMenu = Main.panel.statusArea.dateMenu;
         Main.panel._rightBox.remove_actor(dateMenu.container);
-        Main.panel._addToPanelBox('dateMenu', dateMenu, Main.sessionMode.panel.center.indexOf('dateMenu'), Main.panel._centerBox);
-    }
+        Main.panel._addToPanelBox();
+    } */
     // restore system power icon if necessary
     // workaround bug introduced by multiple cpus init :
     // if (Schema.get_boolean('battery-hidesystem') && Main.__sm.elts.battery.icon_hidden) {
